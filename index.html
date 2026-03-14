@@ -14,51 +14,41 @@
         }
         
         body {
-            background: #2b5797;  /* Win7 taskbar blue */
+            background: #2b5797;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             background-image: radial-gradient(circle at 20% 30%, #3c6eb4 0%, #1f3a68 100%);
         }
         
-        /* Windows 7 startup video overlay */
-        #startup-overlay {
+        /* Black boot overlay with video */
+        #boot-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             background: black;
+            z-index: 9999;
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 9999;
-            cursor: pointer;
-            transition: opacity 1s ease;
+            transition: opacity 1.5s ease;
         }
         
-        #startup-video {
+        .boot-video-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: black;
+        }
+        
+        #boot-video {
             width: 100%;
             height: 100%;
             object-fit: cover;
-        }
-        
-        .skip-message {
-            position: absolute;
-            bottom: 30px;
-            color: rgba(255,255,255,0.5);
-            font-family: 'Segoe UI', sans-serif;
-            font-size: 14px;
-            background: rgba(0,0,0,0.5);
-            padding: 8px 20px;
-            border-radius: 30px;
-            cursor: pointer;
-            transition: color 0.2s;
-        }
-        
-        .skip-message:hover {
-            color: white;
-            background: rgba(0,0,0,0.7);
         }
         
         /* Hidden audio element */
@@ -66,7 +56,7 @@
             display: none;
         }
         
-        /* Main content (hidden until video ends) */
+        /* Main content (hidden until boot ends) */
         #main-content {
             opacity: 0;
             transition: opacity 1.5s ease;
@@ -355,13 +345,14 @@
     </style>
 </head>
 <body>
-    <!-- Windows 7 startup overlay -->
-    <div id="startup-overlay" onclick="skipVideo()">
-        <video id="startup-video" autoplay muted>
-            <source src="https://files.catbox.moe/j3zmsi.mp4" type="video/mp4">
-            Your browser does not support the video tag.
-        </video>
-        <div class="skip-message" onclick="skipVideo(event)">⏵ Skip to desktop (click anywhere)</div>
+    <!-- Black boot overlay with video -->
+    <div id="boot-overlay">
+        <div class="boot-video-container">
+            <video id="boot-video" autoplay muted>
+                <source src="https://files.catbox.moe/4ov8zf.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
     </div>
     
     <!-- Hidden audio (plays once after video) -->
@@ -470,12 +461,18 @@
                         <p style="margin-top: 8px; color: #2d577b;">— Superchavo, creator of Rollbacx</p>
                     </div>
                     
-                    <!-- VMshare note -->
+                    <!-- VMshare section with BOTH clickable links -->
                     <div style="background: linear-gradient(180deg, #d2e0f0, #b8cee8); border: 1px solid #6d8bb0; border-radius: 6px; padding: 15px 20px; margin: 20px 0;">
                         <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
                             <span style="background: #234c73; color: white; padding: 4px 16px; border-radius: 20px;">🖥️ VMshare</span>
                             <span style="color: #153e5e;">alkon VM has win11 screenshots ready · vnc over wss</span>
-                            <span style="margin-left: auto; background: #e1eaf3; padding: 4px 12px; border-radius: 16px;">waiting for vmshare</span>
+                            <div style="margin-left: auto; display: flex; gap: 10px;">
+                                <a href="https://websim.com/@VMsHARE/vmshare-4" target="_blank" style="background: #e1eaf3; padding: 4px 12px; border-radius: 16px; color: #1e3f5f; text-decoration: none; border: 1px solid #8aa3c0; font-weight: 500;">🌐 WebSim</a>
+                                <a href="https://prototype.e1x8.xyz" target="_blank" style="background: #c0d4ec; padding: 4px 12px; border-radius: 16px; color: #1e3f5f; text-decoration: none; border: 1px solid #5f7da0; font-weight: 600;">⚙️ Prototype</a>
+                            </div>
+                        </div>
+                        <div style="margin-top: 8px; font-size: 12px; color: #2d4b6e; text-align: right;">
+                            <span>⏳ waiting for vmshare to come back online...</span>
                         </div>
                     </div>
                     
@@ -514,8 +511,8 @@
 
     <script>
         // Get elements
-        const overlay = document.getElementById('startup-overlay');
-        const video = document.getElementById('startup-video');
+        const overlay = document.getElementById('boot-overlay');
+        const video = document.getElementById('boot-video');
         const audio = document.getElementById('boot-sound');
         const mainContent = document.getElementById('main-content');
         
@@ -531,7 +528,7 @@
             
             // Play audio exactly once when video disappears
             if (audio) {
-                audio.currentTime = 0; // Start from beginning
+                audio.currentTime = 0;
                 audio.play().catch(e => console.log('Audio play failed:', e));
             }
             
@@ -539,43 +536,30 @@
             setTimeout(() => {
                 overlay.style.display = 'none';
                 mainContent.classList.add('visible');
-            }, 1000); // Match CSS transition
-        }
-        
-        // Function to skip video manually
-        function skipVideo(event) {
-            if (event) {
-                event.stopPropagation();
-            }
-            showDesktop();
+            }, 1500);
         }
         
         // When video ends naturally, trigger desktop
         if (video) {
             video.addEventListener('ended', showDesktop);
             
-            // Fallback: if video is already ended or can't play
-            video.addEventListener('canplay', function() {
-                // If video is very short, this ensures we catch it
-                if (video.readyState >= 3 && video.duration > 0) {
-                    setTimeout(() => {
-                        if (video.ended || video.currentTime >= video.duration - 0.1) {
-                            showDesktop();
-                        }
-                    }, video.duration * 1000 + 100);
+            video.addEventListener('error', function() {
+                console.log('Video failed to load, showing desktop after 5 seconds');
+                setTimeout(showDesktop, 5000);
+            });
+            
+            video.addEventListener('loadedmetadata', function() {
+                if (video.duration < 1) {
+                    setTimeout(showDesktop, (video.duration * 1000) + 100);
                 }
             });
         }
         
-        // Handle click on overlay (skip)
-        if (overlay) {
-            overlay.addEventListener('click', skipVideo);
-        }
-        
-        // Ensure audio doesn't loop (double-check)
         audio.addEventListener('ended', function() {
-            console.log('Audio played once');
+            console.log('Audio played once - Windows 7 startup sound complete');
         });
+        
+        audio.load();
     </script>
 </body>
 </html>
