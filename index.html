@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Windows 7 Boot · Rollbacx</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: black;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: background 0.5s ease;
+        }
+        
+        /* boot sequence container - covers everything */
+        .boot-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: black;
+            z-index: 2000;
+            transition: opacity 1.5s ease, visibility 1.5s ease;
+        }
+        
+        /* phase 2: mp4 boot animation (windows 7 boot screen) */
+        #bootPhase2 {
+            background: black;
+        }
+        
+        .mp4-container {
+            text-align: center;
+            width: 100%;
+            max-width: 1024px;
+            margin: 0 auto;
+        }
+        
+        .boot-video {
+            width: 100%;
+            height: auto;
+            display: block;
+            outline: none;
+        }
+        
+        /* loading text for slow connections */
+        .loading-text {
+            color: #ffffff;
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 18px;
+            margin-top: 20px;
+            text-shadow: 0 0 8px #00aaff;
+            letter-spacing: 1px;
+        }
+        
+        /* main content (hidden until boot completes) */
+        .main-content {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 1.2s ease, visibility 1.2s ease;
+            width: 100%;
+            min-height: 100vh;
+            background: #2b5797;
+            background-image: radial-gradient(circle at 20% 30%, #3c6eb4 0%, #1f3a68 100%);
+        }
+        
+        .main-content.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        /* Windows 7 Aero Glass + Retro Styling */
+        .window-container {
+            max-width: 960px;
+            margin: 30px auto;
+            padding: 0 20px;
+            flex: 1;
+        }
+        
+        /* Main Aero window */
+        .aero-window {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 12px 12px 8px 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.3) inset, 0 0 20px rgba(255, 255, 255, 0.2) inset;
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        /* Windows 7 title bar */
+        .title-bar {
+            background: linear-gradient(180deg, #eef3f7 0%, #d9e2ec 15%, #c1d1e2 85%, #a8bbd1 100%);
+            padding: 10px 15px 8px 15px;
+            border-bottom: 1px solid #b3c7e3;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 1px 0 #ffffff inset;
+        }
+        
+        .window-controls {
+            display: flex;
+            gap: 8px;
+            margin-right: 15px;
+        }
+        
+        .win-btn {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+        }
+        
+        .win-btn.close { background: #c8554b; }
+        .win-btn.minimize { background: #e6b94c; }
+        .win-btn.maximize { background: #6ea64b; }
+        
+        .title-text {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e3f5f;
+            text-shadow: 0 1px 0 white;
+            flex: 1;
+        }
+        
+        .title-icon {
+            width: 20px;
+            height: 20px;
+            background: #3c6eb4;
+            border-radius: 4px;
+            margin-right: 10px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        
+        /* Aero content area */
+        .aero-content {
+            padding: 25px 30px 30px 30px;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        
+        /* Windows 7 welcome banner */
+        .welcome-banner {
+            background: linear-gradient(180deg, #fff6e5 0%, #ffe7c4 100%);
+            border: 1px solid #f1c48b;
+            border-radius: 8px;
+            padding: 18px 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1), 0 0 0 1px #ffe9cf inset;
+            position: relative;
+            background-image: radial-gradient(circle at 100% 0%, rgba(255,255,200,0.4) 0%, transparent 60%);
+        }
+        
+        .welcome-banner h1 {
+            font-size: 28px;
+            font-weight: 300;
+            color: #1e3f5f;
+            text-shadow: 0 1px 0 white;
+            margin-bottom: 5px;
+        }
+        
+        .welcome-banner h1 strong {
+            font-weight: 600;
+            color: #2e6fa3;
+        }
+        
+        .welcome-banner p {
+            font-size: 16px;
+            color: #2b4d6a;
+        }
+        
+        .author-tag {
+            position: absolute;
+            bottom: 12px;
+            right: 20px;
+            background: rgba(30, 63, 95, 0.2);
+            padding: 4px 14px;
+            border-radius: 30px;
+            font-size: 14px;
+            color: #15344d;
+            font-style: italic;
+            border: 1px solid rgba(255,255,255,0.6);
+            backdrop-filter: blur(2px);
+        }
+        
+        /* Windows 7 style command bars */
+        .command-bar {
+            background: linear-gradient(180deg, #f0f6fb 0%, #e2ebf4 100%);
+            border: 1px solid #b3c7e3;
+            border-radius: 5px;
+            padding: 12px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 20px;
+            box-shadow: 0 1px 0 white inset, 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .command-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #1e3f5f;
+            font-weight: 500;
+            font-size: 13px;
+            border-right: 1px solid #b3c7e3;
+            padding-right: 20px;
+        }
+        
+        .command-item:last-child {
+            border-right: none;
+        }
+        
+        .command-icon {
+            font-size: 18px;
+            filter: drop-shadow(0 1px 0 white);
+        }
+        
+        /* 3D replica of Aero buttons */
+        .aero-button {
+            background: linear-gradient(180deg, #f0f7fc 0%, #d5e5f5 50%, #b0cef0 100%);
+            border: 1px solid #3c7fb1;
+            border-radius: 4px;
+            padding: 10px 22px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #1e3f5f;
+            box-shadow: 0 1px 0 white inset, 0 2px 5px rgba(0, 0, 0, 0.2);
+            text-shadow: 0 1px 0 white;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: 0.05s linear;
+            text-decoration: none;
+        }
+        
+        .aero-button:hover {
+            background: linear-gradient(180deg, #f5faff 0%, #e2f0ff 50%, #c2dfff 100%);
+            border-color: #569de0;
+            box-shadow: 0 1px 0 white inset, 0 0 8px #a5d0ff;
+        }
+        
+        .aero-button:active {
+            background: linear-gradient(180deg, #b0cef0 0%, #c7defa 100%);
+            border-color: #2a6495;
+            box-shadow: 0 1px 2px #1e3f5f inset;
+            transform: translateY(1px);
+        }
+        
+        .warning-pane {
+            background: #fff0e0;
+            border: 2px solid #d9534f;
+            border-radius: 8px;
+            padding: 18px 25px;
+            margin: 25px 0;
+            box-shadow: 0 0 0 2px #ffe6ce inset, 0 4px 8px rgba(0,0,0,0.2);
+            background-image: repeating-linear-gradient(45deg, rgba(217,83,79,0.05) 0px, rgba(217,83,79,0.05) 10px, transparent 10px, transparent 20px);
+        }
+        
+        .warning-pane h3 {
+            color: #a12b28;
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .badge-vm {
+            background: #2d5f7e;
+            color: white;
+            border-radius: 30px;
+            padding: 5px 18px;
+            font-weight: 600;
+            font-size: 15px;
+            display: inline-block;
+            border: 1px solid #a2d0ff;
+            box-shadow: 0 1px 0 #b0d6ff inset;
+        }
+        
+        /* file list windows 7 style */
+        .file-panel {
+            background: white;
+            border: 1px solid #a7c3e2;
+            border-radius: 5px;
+            margin: 25px 0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        
+        .file-panel-header {
+            background: linear-gradient(180deg, #e5effa 0%, #cbddf5 100%);
+            padding: 8px 15px;
+            border-bottom: 1px solid #a7c3e2;
+            font-weight: 600;
+            color: #1d4b77;
+            text-shadow: 0 1px 0 white;
+        }
+        
+        .file-row {
+            display: flex;
+            padding: 8px 15px;
+            border-bottom: 1px solid #dbe5f0;
+            background: #f9fcff;
+            font-size: 14px;
+        }
+        
+        .file-row:last-child {
+            border-bottom: none;
+        }
+        
+        .file-icon {
+            width: 24px;
+            color: #d48b2c;
+            margin-right: 10px;
+        }
+        
+        .file-name {
+            width: 200px;
+            font-weight: 500;
+        }
+        
+        .file-msg {
+            flex: 1;
+            color: #346792;
+        }
+        
+        .file-date {
+            color: #587b9c;
+            width: 100px;
+        }
+        
+        .aero-footer {
+            text-align: center;
+            margin-top: 30px;
+            color: white;
+            text-shadow: 0 1px 2px black;
+            font-size: 13px;
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 6px;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .success-message {
+            background: #e2f0d9;
+            border: 2px solid #2b6d2b;
+            border-radius: 6px;
+            padding: 20px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 16px;
+            color: #1e4f1e;
+            box-shadow: 0 0 0 3px #c5e0b4 inset;
+            margin: 30px 0;
+        }
+        
+        .divider {
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #b0cef0, #3c7fb1, #b0cef0, transparent);
+            margin: 20px 0;
+        }
+        
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        /* loading spinner for slow connections */
+        .spinner {
+            width: 40px;
+            height: 40px;
+            margin: 20px auto;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #00aaff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Phase 2: MP4 Boot Animation (Windows 7 boot screen) -->
+    <div id="bootPhase2" class="boot-container">
+        <div class="mp4-container">
+            <video id="bootVideo" class="boot-video" playsinline muted>
+                <source src="https://files.catbox.moe/35vmk7.mp4" type="video/mp4">
+                Your browser does not support the video tag. Please upgrade to a modern browser.
+            </video>
+            <div class="loading-text" id="loadingMessage">Starting Windows 7...</div>
+            <div class="spinner" id="spinner"></div>
+        </div>
+    </div>
+
+    <!-- Audio element for startup sound (hidden) -->
+    <audio id="startupSound" preload="auto">
+        <source src="https://files.catbox.moe/qfkxhv.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <!-- Main Content (Windows 7 Aero Interface) -->
+    <div id="mainContent" class="main-content">
+        <div class="window-container">
+            <!-- Main Aero Window -->
+            <div class="aero-window">
+                <!-- Windows 7 Title Bar -->
+                <div class="title-bar">
+                    <div class="window-controls">
+                        <div class="win-btn close"></div>
+                        <div class="win-btn minimize"></div>
+                        <div class="win-btn maximize"></div>
+                    </div>
+                    <div class="title-icon"></div>
+                    <div class="title-text">Rollbacx - Windows Rollback Utility</div>
+                </div>
+                
+                <!-- Aero Content Area -->
+                <div class="aero-content">
+                    
+                    <!-- Welcome Banner with Author -->
+                    <div class="welcome-banner">
+                        <h1><strong>Rollbacx</strong> — go back to your favorite Windows</h1>
+                        <p>Windows 7 • Windows XP • Windows 10 • also Linux things</p>
+                        <div class="author-tag">by Superchavo</div>
+                    </div>
+                    
+                    <!-- Command Bar (replica of explorer) -->
+                    <div class="command-bar">
+                        <div class="command-item"><span class="command-icon">⏪</span> Rollback</div>
+                        <div class="command-item"><span class="command-icon">🐧</span> Linux</div>
+                        <div class="command-item"><span class="command-icon">⚙️</span> UEFI/Legacy</div>
+                        <div class="command-item"><span class="command-icon">🛡️</span> VM only</div>
+                    </div>
+                    
+                    <!-- CRITICAL WARNING -->
+                    <div class="warning-pane">
+                        <h3>⚠️ CRITICAL — BRICK RISK</h3>
+                        <p style="font-size: 16px; font-weight: 500;">THIS MIGHT BRICK UR DEVICE, THATS WHY U SHOULD ONLY RUN IT ON A VM</p>
+                        <div style="margin-top: 15px; display: flex; gap: 15px; align-items: center;">
+                            <span class="badge-vm">🛡️ MUST USE VIRTUAL MACHINE</span>
+                            <span class="badge-vm" style="background: #7e2d2d;">📸 SNAPSHOT BEFORE RUN</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Aero glass card grid -->
+                    <div style="display: flex; flex-wrap: wrap; gap: 15px; margin: 25px 0;">
+                        <div style="flex: 1; min-width: 160px; background: rgba(255,255,255,0.5); backdrop-filter: blur(4px); border-radius: 8px; padding: 20px 15px; border: 1px solid rgba(255,255,255,0.8); box-shadow: 0 3px 8px rgba(0,0,0,0.2);">
+                            <div style="font-size: 32px; margin-bottom: 8px;">🪟⏎</div>
+                            <h3 style="color: #1e3f5f;">Windows rollback</h3>
+                            <p style="color: #1f4a72;">uses windows.old or any partition. forces downgrade.</p>
+                        </div>
+                        <div style="flex: 1; min-width: 160px; background: rgba(255,255,255,0.5); backdrop-filter: blur(4px); border-radius: 8px; padding: 20px 15px; border: 1px solid rgba(255,255,255,0.8); box-shadow: 0 3px 8px rgba(0,0,0,0.2);">
+                            <div style="font-size: 32px; margin-bottom: 8px;">🐧⚡</div>
+                            <h3 style="color: #1e3f5f;">Linux things</h3>
+                            <p style="color: #1f4a72;">make linux primary or (try to) convert windows → linux.</p>
+                        </div>
+                        <div style="flex: 1; min-width: 160px; background: rgba(255,255,255,0.5); backdrop-filter: blur(4px); border-radius: 8px; padding: 20px 15px; border: 1px solid rgba(255,255,255,0.8); box-shadow: 0 3px 8px rgba(0,0,0,0.2);">
+                            <div style="font-size: 32px; margin-bottom: 8px;">🧯⚠️</div>
+                            <h3 style="color: #1e3f5f;">UEFI / Legacy</h3>
+                            <p style="color: #1f4a72;">"official" UEFI → Legacy conversion. extremely unstable.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- File panel replica from Windows 7 -->
+                    <div class="file-panel">
+                        <div class="file-panel-header">📁 Repository files · 3 commits (by Superchavo)</div>
+                        <div class="file-row">
+                            <div class="file-icon">📄</div>
+                            <div class="file-name">rollbacx ver1.bat</div>
+                            <div class="file-msg">The file itself that might brick ur device</div>
+                            <div class="file-date">Mar 15, 2026</div>
+                        </div>
+                        <div class="file-row">
+                            <div class="file-icon">📄</div>
+                            <div class="file-name">README.md</div>
+                            <div class="file-msg">README.md has been updated</div>
+                            <div class="file-date">Mar 15, 2026</div>
+                        </div>
+                        <div class="file-row">
+                            <div class="file-icon">📄</div>
+                            <div class="file-name">LICENSE</div>
+                            <div class="file-msg">Initial commit</div>
+                            <div class="file-date">Mar 15, 2026</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Download button with correct release link -->
+                    <div style="display: flex; justify-content: center; margin: 30px 0 20px;">
+                        <a href="https://github.com/Superchavo/Rollbacx/releases/download/Releases/rollbacx.ver1.bat" class="aero-button" style="font-size: 18px; padding: 14px 40px;">
+                            ⬇️ DOWNLOAD ROLLBACX VER1
+                        </a>
+                    </div>
+                    
+                    <!-- nice aero divider -->
+                    <div class="divider"></div>
+                    
+                    <!-- what people say -->
+                    <div style="background: rgba(230, 242, 255, 0.7); padding: 18px; border-radius: 6px; border: 1px solid #abc1db; margin: 20px 0; backdrop-filter: blur(2px);">
+                        <p style="font-size: 16px; font-style: italic; color: #124066;">“it's like a virus but it's not trying to be harmful — it just wants u back in ur old favorite win version”</p>
+                        <p style="margin-top: 8px; color: #2d577b;">— Superchavo, creator of Rollbacx</p>
+                    </div>
+                    
+                    <!-- vmshare / alkon note -->
+                    <div style="background: linear-gradient(180deg, #d2e0f0, #b8cee8); border: 1px solid #6d8bb0; border-radius: 6px; padding: 15px 20px; margin: 20px 0;">
+                        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                            <span style="background: #234c73; color: white; padding: 4px 16px; border-radius: 20px;">🖥️ VMshare</span>
+                            <span style="color: #153e5e;">alkon VM has win11 screenshots ready · vnc over wss</span>
+                            <span style="margin-left: auto; background: #e1eaf3; padding: 4px 12px; border-radius: 16px;">waiting for vmshare</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Retro success box preview -->
+                    <div class="success-message">
+                        <pre style="font-family: 'Consolas', monospace;">========================================================
+              CONGRATULATIONS!
+========================================================
+
+╔══════════════════════════════════════════════════╗
+║     YOUR SYSTEM IS NOW RUNNING:                  ║
+║     Windows 7 Ultimate (Build 7601)              ║
+╚══════════════════════════════════════════════════╝</pre>
+                    </div>
+                    
+                    <!-- footer text -->
+                    <div style="text-align: center; color: #2b4f74; font-size: 12px; margin-top: 10px;">
+                        run as administrator · inside virtual machine only · snapshot strongly recommended
+                    </div>
+                </div> <!-- end aero-content -->
+            </div> <!-- end aero-window -->
+            
+            <!-- Windows 7 style footer -->
+            <div class="aero-footer">
+                <div style="display: flex; justify-content: center; gap: 30px; align-items: center;">
+                    <span>🪟 Rollbacx</span>
+                    <span>⏎ Superchavo © 2026</span>
+                    <span>🐧 linux mode</span>
+                    <span>📅 Mar 2026</span>
+                </div>
+                <div style="margin-top: 8px; font-size: 11px; opacity: 0.8;">
+                    “CONGRATS, UR IN Windows 7 (Build 7601)” — the only success message that matters
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Boot sequence: MP4 → sound → show main content
+        (function() {
+            // Get elements
+            const bootPhase2 = document.getElementById('bootPhase2');
+            const bootVideo = document.getElementById('bootVideo');
+            const loadingMessage = document.getElementById('loadingMessage');
+            const spinner = document.getElementById('spinner');
+            const startupSound = document.getElementById('startupSound');
+            const mainContent = document.getElementById('mainContent');
+            
+            // Variables to track state
+            let videoEnded = false;
+            let soundPlayed = false;
+            let soundPlaying = false;
+            
+            // Function to hide boot and show main content
+            function showMainContent() {
+                if (bootPhase2 && mainContent) {
+                    // Fade out boot container
+                    bootPhase2.style.opacity = '0';
+                    
+                    // After fade, hide it completely and show main content
+                    setTimeout(() => {
+                        bootPhase2.style.visibility = 'hidden';
+                        mainContent.classList.add('visible');
+                        
+                        // Also stop video to save resources
+                        if (bootVideo) {
+                            bootVideo.pause();
+                            bootVideo.src = '';
+                            bootVideo.load();
+                        }
+                    }, 1500); // Match transition time
+                }
+            }
+            
+            // When video metadata is loaded, hide loading message
+            bootVideo.addEventListener('loadedmetadata', function() {
+                if (loadingMessage) {
+                    loadingMessage.style.opacity = '0';
+                    setTimeout(() => {
+                        if (loadingMessage) loadingMessage.style.display = 'none';
+                        if (spinner) spinner.style.display = 'none';
+                    }, 500);
+                }
+            });
+            
+            // When video ends
+            bootVideo.addEventListener('ended', function() {
+                console.log('Video ended');
+                videoEnded = true;
+                
+                // Play startup sound
+                if (startupSound && !soundPlaying) {
+                    soundPlaying = true;
+                    
+                    // Try to play sound (browsers may block autoplay)
+                    let playPromise = startupSound.play();
+                    
+                    if (playPromise !== undefined) {
+                        playPromise.then(() => {
+                            console.log('Sound started playing');
+                            soundPlayed = true;
+                            
+                            // Wait for sound to end, then show content
+                            setTimeout(() => {
+                                showMainContent();
+                            }, 5000); // Give sound 5 seconds to play (typical win7 startup sound length)
+                        }).catch(error => {
+                            console.log('Sound autoplay failed:', error);
+                            // If sound fails, still show content after delay
+                            soundPlayed = false;
+                            setTimeout(() => {
+                                showMainContent();
+                            }, 2000);
+                        });
+                    } else {
+                        // Fallback for browsers without promise
+                        soundPlayed = true;
+                        setTimeout(() => {
+                            showMainContent();
+                        }, 5000);
+                    }
+                } else {
+                    // If no sound element, just show content after delay
+                    setTimeout(() => {
+                        showMainContent();
+                    }, 2000);
+                }
+            });
+            
+            // Handle video errors (fallback)
+            bootVideo.addEventListener('error', function() {
+                console.log('Video error, falling back');
+                if (loadingMessage) {
+                    loadingMessage.innerText = 'Loading... continuing to site';
+                }
+                
+                // Still try to show content after delay
+                setTimeout(() => {
+                    // Try to play sound anyway
+                    if (startupSound) {
+                        startupSound.play().catch(() => {});
+                    }
+                    showMainContent();
+                }, 3000);
+            });
+            
+            // Start playing the video
+            bootVideo.play().catch(error => {
+                console.log('Video autoplay failed:', error);
+                // If autoplay fails, show main content anyway
+                if (loadingMessage) {
+                    loadingMessage.innerText = 'Click anywhere to continue';
+                    document.addEventListener('click', function() {
+                        showMainContent();
+                    }, { once: true });
+                } else {
+                    setTimeout(showMainContent, 3000);
+                }
+            });
+            
+            // Preload sound
+            if (startupSound) {
+                startupSound.load();
+            }
+            
+            // Fallback: if something hangs, show content after 15 seconds max
+            setTimeout(() => {
+                if (mainContent && !mainContent.classList.contains('visible')) {
+                    console.log('Fallback timeout triggered');
+                    if (startupSound) {
+                        startupSound.play().catch(() => {});
+                    }
+                    showMainContent();
+                }
+            }, 15000);
+        })();
+    </script>
+</body>
+</html>
